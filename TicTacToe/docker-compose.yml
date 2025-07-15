@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tictactoe
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      BOARD_SIZE: "3"
+      WIN_CONDITION: "3"
+      DB_HOST: "db"
+      DB_NAME: "tictactoe"
+      DB_USER: "postgres"
+      DB_PASSWORD: "postgres"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
