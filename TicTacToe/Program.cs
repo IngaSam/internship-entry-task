@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TicTacToe.Data;
 using TicTacToe.Repositories;
 using TicTacToe.Services;
+using TicTacToe.Services.Providers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,8 +18,8 @@ options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
 builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddScoped<GameRepository>();
+builder.Services.AddScoped<IRandomProvider, DefaultRandomProvider>();
 builder.Services.AddScoped<GameService>();
-
 
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())

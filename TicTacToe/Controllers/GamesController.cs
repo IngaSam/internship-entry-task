@@ -57,6 +57,16 @@ namespace TicTacToe.Controllers
         {
             try
             {
+                if(move == null)
+        {
+                    return BadRequest(new ProblemDetails
+                    {
+                        Title = "Invalid request",
+                        Detail = "Move request cannot be null",
+                        Status = StatusCodes.Status400BadRequest
+                    });
+                }
+
                 var game = await  _gameService.MakeMove(id, move);
                 return Ok(game);
             }
@@ -66,8 +76,7 @@ namespace TicTacToe.Controllers
                 {
                     Title = "Game not found",
                     Detail = ex.Message,
-                    Status = StatusCodes.Status404NotFound,
-                    Instance = HttpContext.Request.Path
+                    Status = StatusCodes.Status404NotFound
                 });
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("already finished"))
@@ -76,8 +85,7 @@ namespace TicTacToe.Controllers
                 {
                     Title = "Game finished",
                     Detail = ex.Message,
-                    Status = StatusCodes.Status409Conflict,
-                    Instance = HttpContext.Request.Path
+                    Status = StatusCodes.Status409Conflict
                 });
             }
             catch (InvalidOperationException ex)
@@ -86,8 +94,7 @@ namespace TicTacToe.Controllers
                 {
                     Title = "Invalid move",
                     Detail = ex.Message,
-                    Status = StatusCodes.Status400BadRequest,
-                    Instance = HttpContext.Request.Path
+                    Status = StatusCodes.Status400BadRequest
                 });
             }
         }

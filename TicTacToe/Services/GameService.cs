@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using TicTacToe.Models;
 using TicTacToe.Repositories;
+using TicTacToe.Services.Providers;
 
 namespace TicTacToe.Services
 {
@@ -8,11 +9,12 @@ namespace TicTacToe.Services
     public class GameService
     {
         private readonly GameRepository _repository;
-        private readonly Random _random = new();
+        private readonly IRandomProvider _random;
 
-        public GameService(GameRepository repository)
+        public GameService(GameRepository repository, IRandomProvider? randomProvider = null)
         {
             _repository = repository;
+            _random = randomProvider ?? new DefaultRandomProvider();
         }
 
         public async Task<Game> CreateGame(int size)
@@ -40,6 +42,11 @@ namespace TicTacToe.Services
 
         public async Task<Game> MakeMove(Guid gameId, MoveRequest move)
         {
+            if (move == null)
+            {
+                throw new ArgumentNullException(nameof(move), "Move request cannot be null");
+            }
+
             var game = await _repository.GetGameAsync(gameId)
                 ?? throw new KeyNotFoundException("Game not found");
 
@@ -63,6 +70,9 @@ namespace TicTacToe.Services
 
             if (game.Winner != null)
                 throw new InvalidOperationException("Game is alredy finished");
+
+            // отладочный вывод перед проверкой игрока
+            Console.WriteLine($"Validating move: CurrentPlayer={game.CurrentPlayer}, Move.Player={move.Player}");
 
             if (move.Player != game.CurrentPlayer)
                 throw new InvalidOperationException($"Not player's turn. Expected: {game.CurrentPlayer}");
@@ -89,26 +99,12 @@ namespace TicTacToe.Services
             // Меняем игрока только если игра продолжается
             if (game.Winner == null)
             {
-                game.CurrentPlayer = game.CurrentPlayer == "X" ? "O" : "X";
+                if (move.Player == game.CurrentPlayer)
+                {
+                    game.CurrentPlayer = game.CurrentPlayer == "X" ? "O" : "X";
+                }
             }
         }
-
-
-        //private string? CheckWinner(string[][] board)
-        //{
-        //    int size = board.Length;
-        //    // Проверка строк и столбцов
-        //    for (int i = 0; i < size; i++)
-        //    {
-        //        if (CheckLine(board, i, 0, 0, 1)) return board[i][0];
-        //        if (CheckLine(board, 0, i, 1, 0)) return board[0][i];
-        //    }
-        //    // Проверка диагоналей
-        //    if (CheckLine(board, 0, 0, 1, 1)) return board[0][0];
-        //    if (CheckLine(board, 0, size - 1, 1, -1)) return board[0][size - 1];
-        //    // Проверка ничьи 
-        //    return IsBoardFull(board) ? "Draw" : null;
-        //}
         private string? CheckWinner(string[][] board)
         {
             int size = board.Length;
@@ -150,18 +146,6 @@ namespace TicTacToe.Services
             return true;
         }
 
-        private bool CheckLine(string[][] board, int startX, int startY, int dx, int dy)
-        {
-            string first = board[startX][startY];
-            if (string.IsNullOrEmpty(first)) return false;
-            int size = board.Length;
-            for (int i = 1; i < size; i++)
-            {
-                if (board[startX + i * dx][startY + i * dy] != first)
-                    return false;
-            }
-            return true;
-        }
         private bool CheckDirection(string[][] board, int startX, int startY, int dx, int dy, int winLength)
         {
             string symbol = board[startX][startY];
