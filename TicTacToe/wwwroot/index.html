@@ -5,8 +5,9 @@
     <style>
         .board {
             display: grid;
-            grid-template-columns: repeat(3, 100px);
+            grid-template-columns: repeat(var(--size), 100px);
             gap: 5px;
+            margin: 20px 0;
         }
 
         .cell {
@@ -18,7 +19,51 @@
             align-items: center;
             font-size: 24px;
             cursor: pointer;
+            background-color: #f8f9fa;
+            transition: background-color 0.2s;
         }
+
+            .cell:hover {
+                background-color: #e9ecef;
+            }
+
+            .cell.x {
+                color: #dc3545;
+            }
+
+            .cell.o {
+                color: #007bff;
+            }
+
+        #status {
+            font-size: 1.2em;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .winner {
+            background-color: #d4edda;
+        }
+
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 1em;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+            button:hover {
+                background-color: #0069d9;
+            }
     </style>
 </head>
 <body>
@@ -26,31 +71,51 @@
     <button id="newGame">New Game</button>
     <div id="gameId"></div>
     <div class="board" id="board"></div>
-    <div id="status"></div>
+    <div id="status">Start a new game</div>
+    <div id="error" class="error"></div>
 
     <script>
         let currentGameId = null;
         let currentPlayer = 'X';
+        let boardSize = 3;
+        let isMakingMove = false;
 
         document.getElementById('newGame').addEventListener('click', async () => {
-            const response = await fetch('/api/games', { method: 'POST' });
-            const game = await response.json();
-            currentGameId = game.id;
-            document.getElementById('gameId').textContent = `Game ID: ${currentGameId}`;
-            renderBoard(game.board);
-            currentPlayer = 'X';
-            updateStatus(`Current player: ${currentPlayer}`);
+            try {
+                const response = await fetch('/api/games', { method: 'POST' });
+                if (!response.ok) throw new Error('Failed to create game');
+
+                const game = await response.json();
+                currentGameId = game.id;
+                boardSize = game.board.length;
+
+                document.documentElement.style.setProperty('--size', boardSize);
+                document.getElementById('gameId').textContent = `Game ID: ${currentGameId}`;
+                document.getElementById('error').textContent = '';
+
+                renderBoard(game.board);
+                currentPlayer = game.currentPlayer;
+                updateStatus(`Current player: ${currentPlayer}`, false);
+            } catch (error) {
+                showError(error.message);
+            }
         });
 
         function renderBoard(board) {
             const boardElement = document.getElementById('board');
             boardElement.innerHTML = '';
 
-            for (let row = 0; row < 3; row++) {
-                for (let col = 0; col < 3; col++) {
+            for (let row = 0; row < boardSize; row++) {
+                for (let col = 0; col < boardSize; col++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
-                    cell.textContent = board?.[row]?.[col] || '';
+                    const cellValue = board?.[row]?.[col] || '';
+
+                    if (cellValue) {
+                        cell.textContent = cellValue;
+                        cell.classList.add(cellValue.toLowerCase());
+                    }
+
                     cell.addEventListener('click', () => makeMove(row, col));
                     boardElement.appendChild(cell);
                 }
@@ -58,7 +123,10 @@
         }
 
         async function makeMove(row, col) {
-            if (!currentGameId) return;
+            if (!currentGameId || isMakingMove) return;
+
+            isMakingMove = true;
+            document.getElementById('error').textContent = '';
 
             try {
                 const response = await fetch(`/api/games/${currentGameId}/moves`, {
@@ -71,20 +139,50 @@
                     })
                 });
 
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Move failed');
+                }
+
                 const game = await response.json();
                 renderBoard(game.board);
                 currentPlayer = game.currentPlayer;
-                updateStatus(game.winner
-                    ? `Winner: ${game.winner}`
-                    : `Current player: ${currentPlayer}`);
+
+                if (game.winner) {
+                    updateStatus(game.winner === 'Draw'
+                        ? 'Game ended in a draw!'
+                        : `Winner: ${game.winner}!`, true);
+                } else {
+                    updateStatus(`Current player: ${currentPlayer}`, false);
+                }
             } catch (error) {
-                console.error('Move failed:', error);
+                showError(error.message);
+                // Не меняем currentPlayer при ошибке, чтобы игрок мог повторить ход
+            } finally {
+                isMakingMove = false;
             }
         }
 
-        function updateStatus(message) {
-            document.getElementById('status').textContent = message;
+        function updateStatus(message, isGameEnded) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+
+            if (isGameEnded) {
+                statusElement.classList.add('winner');
+            } else {
+                statusElement.classList.remove('winner');
+            }
         }
+
+        function showError(message) {
+            document.getElementById('error').textContent = message;
+        }
+
+        // Initialize board with correct size
+        document.addEventListener('DOMContentLoaded', () => {
+            document.documentElement.style.setProperty('--size', boardSize);
+            renderBoard(Array(boardSize).fill().map(() => Array(boardSize).fill('')));
+        });
     </script>
 </body>
 </html>

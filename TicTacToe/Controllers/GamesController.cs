@@ -62,28 +62,34 @@ namespace TicTacToe.Controllers
             }
             catch (KeyNotFoundException ex)
             {
-                return NotFound(Problem(
-                    title: "Game not found",
-                    detail: ex.Message,
-                    statusCode: 404));
-                
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Game not found",
+                    Detail = ex.Message,
+                    Status = StatusCodes.Status404NotFound,
+                    Instance = HttpContext.Request.Path
+                });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("already finished"))
+            {
+                return Conflict(new ProblemDetails
+                {
+                    Title = "Game finished",
+                    Detail = ex.Message,
+                    Status = StatusCodes.Status409Conflict,
+                    Instance = HttpContext.Request.Path
+                });
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(Problem(
-                    title:"Invalid move",
-                    detail:ex.Message,
-                    statusCode: 400));
-            }
-            catch (Exception ex)
-            {
-                return Problem(
-                    title:"File to make move",
-                    detail: ex.Message,
-                    statusCode: 500);
+                return BadRequest(new ProblemDetails
+                {
+                    Title = "Invalid move",
+                    Detail = ex.Message,
+                    Status = StatusCodes.Status400BadRequest,
+                    Instance = HttpContext.Request.Path
+                });
             }
         }
-
-
     }
 }

@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16
+    container_name: tictactoe_db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -9,20 +10,38 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tictactoe_net
 
   web:
     build: .
+    container_name: tictactoe_web
     ports:
       - "8080:8080"
     environment:
+      ASPNETCORE_ENVIRONMENT: Production
       BOARD_SIZE: "3"
       WIN_CONDITION: "3"
-      DB_HOST: "db"
-      DB_NAME: "tictactoe"
-      DB_USER: "postgres"
-      DB_PASSWORD: "postgres"
+      ConnectionStrings__DefaultConnection: "Host=db;Database=tictactoe;Username=postgres;Password=postgres;Pooling=true;Minimum Pool Size=5;Maximum Pool Size=20"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    networks:
+      - tictactoe_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   postgres_data:
+
+networks:
+  tictactoe_net:
+    driver: bridge
