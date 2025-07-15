@@ -29,7 +29,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
 # Копируем только файлы проекта для кэширования слоев
-COPY ["TicTacToe.csproj", "Directory.Build.props", "./"]
+COPY ["TicTacToe.csproj", "./"]
 RUN dotnet restore "TicTacToe.csproj"
 
 # Копируем остальные файлы и собираем
@@ -39,9 +39,8 @@ RUN dotnet build "TicTacToe.csproj" -c Release -o /app/build
 # Этап публикации
 FROM build AS publish
 RUN dotnet publish "TicTacToe.csproj" -c Release -o /app/publish \
-    --no-restore \
-    --runtime linux-x64 \
-    --self-contained false
+    -p:UseAppHost=false \
+    -p:RuntimeIdentifier=linux-x64
 
 # Финальный образ
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final

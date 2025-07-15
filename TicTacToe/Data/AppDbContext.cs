@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Newtonsoft.Json;
 using TicTacToe.Models;
 
@@ -16,7 +17,12 @@ namespace TicTacToe.Data
                 .Property(g => g.Board)
                 .HasConversion(
                 v => JsonConvert.SerializeObject(v),
-                v => JsonConvert.DeserializeObject<string[][]>(v));
+                v => JsonConvert.DeserializeObject<string[][]>(v),
+                new ValueComparer<string[][]>(
+                    (c1, c2) => c1.SequenceEqual(c2),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToArray())
+            );
         }       
         
     }

@@ -27,7 +27,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       BOARD_SIZE: "3"
       WIN_CONDITION: "3"
-      ConnectionStrings__DefaultConnection: "Host=db;Database=tictactoe;Username=postgres;Password=postgres;Pooling=true;Minimum Pool Size=5;Maximum Pool Size=20"
+      ConnectionStrings__DefaultConnection: "Host=db;Database=tictactoe;Username=postgres;Password=postgres"
     depends_on:
       db:
         condition: service_healthy
